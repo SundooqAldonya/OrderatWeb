@@ -11,14 +11,19 @@ import AddIcon from "@mui/icons-material/Add";
 import React, { useContext } from "react";
 import ConfigurationContext from "../../../context/Configuration";
 import useStyles from "./styles";
+import FoodCard from "../FoodCard";
 
 function ItemCard(props) {
   const theme = useTheme();
   const { title, foods } = props;
   const classes = useStyles();
   const configuration = useContext(ConfigurationContext);
+
   return (
-    <Container className={classes.cardContainer}>
+    <Container
+      className={classes.cardContainer}
+      sx={{ maxWidth: "100% !important" }}
+    >
       <Typography
         variant="h5"
         color="textSecondary"
@@ -27,12 +32,23 @@ function ItemCard(props) {
         {title}
       </Typography>
       <Grid container spacing={2}>
-        {foods.map((item, index) => (
+        {foods.map((item) => {
+          return (
+            <FoodCard
+              key={item._id}
+              {...item}
+              food={item}
+              onClick={props.onPress}
+              restaurant={props.restaurant}
+            />
+          );
+        })}
+        {/* {foods.map((item, index) => (
           <Grid
             key={index}
             item
             xs={12}
-            md={6}
+            md={4}
             style={{ paddingBottom: "20px" }}
           >
             <Paper
@@ -79,7 +95,7 @@ function ItemCard(props) {
               <Box
                 className={classes.imageContainer}
                 style={{
-                  backgroundImage: `url(${item.image})`,
+                  // backgroundImage: `url(${item.image})`,
                   borderRadius: 10,
                 }}
               >
@@ -89,7 +105,7 @@ function ItemCard(props) {
               </Box>
             </Paper>
           </Grid>
-        ))}
+        ))} */}
       </Grid>
     </Container>
   );

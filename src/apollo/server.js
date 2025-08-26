@@ -1,3 +1,5 @@
+import { gql } from "@apollo/client";
+
 export const sendChatMessage = `mutation SendChatMessage($orderId: ID!, $messageInput: ChatMessageInput!) {
   sendChatMessage(message: $messageInput, orderId: $orderId) {
     success
@@ -60,6 +62,7 @@ export const resetPassword = `mutation ResetPassword($password:String!,$email:St
     result
   }
 }`;
+
 export const createUser = `
   mutation CreateUser($phone:String,$email:String,$password:String,$name:String,$notificationToken:String,$appleId:String){
       createUser(userInput:{
@@ -168,6 +171,7 @@ export const order = `query Order($id:String!){
   }
 }
 `;
+
 export const orderPaypal = `query OrderPaypal($id:String!){
   orderPaypal(id:$id){
     _id
@@ -400,6 +404,85 @@ export const myOrders = `query Orders($offset:Int){
       food
       description
       quantity
+      variation{
+        _id
+        title
+        price
+        discounted
+      }
+      addons{
+        _id
+        options{
+          _id
+          title
+          description
+          price
+        }
+        title
+        description
+        quantityMinimum
+        quantityMaximum
+      }
+    }
+    user{
+      _id
+      name
+      phone
+    }
+    rider{
+      _id
+      name
+    }
+    review{
+      _id
+    }
+    paymentMethod
+    paidAmount
+    orderAmount
+    orderStatus
+    deliveryCharges
+    tipping
+    taxationAmount
+    orderDate
+    expectedTime
+    isPickedUp
+    createdAt
+    completionTime
+    cancelledAt
+    assignedAt
+    deliveredAt
+    acceptedAt
+    pickedAt
+    preparationTime
+  }
+}
+`;
+
+export const singleOrder = `query SingleOrder($id: String!){
+  singleOrder(id: $id){
+    _id
+    orderId
+    restaurant{
+      _id
+      name
+      image
+      slug
+      address
+      location {
+        coordinates
+      }
+    }
+    deliveryAddress{
+      location{coordinates}
+      deliveryAddress
+    }
+    items{
+      _id
+      title
+      food
+      description
+      quantity
+      specialInstructions
       variation{
         _id
         title
@@ -751,6 +834,84 @@ export const restaurant = `query Restaurant($id:String,$slug:String){
   }
 }`;
 
+export const restaurantCustomer = `query RestaurantCustomer($id:String,$slug:String){
+  restaurantCustomer(id:$id,slug:$slug){
+    _id
+    orderId
+    orderPrefix
+    name
+    image
+    slug
+    address
+    location{coordinates}
+    deliveryTime
+    minimumOrder
+    tax
+    reviewData{
+      total
+      ratings
+      reviews{
+        _id
+        order{
+          user{
+            _id
+            name
+            email
+          }
+        }
+        rating
+        description
+        createdAt
+      }
+    }
+    categories{
+      _id
+      title
+      foods{
+        _id
+        title
+        image
+        description
+        variations{
+          _id
+          title
+          price
+          discounted
+          addons
+        }
+      }
+    }
+    options{
+      _id
+      title
+      description
+      price
+    }
+    addons{
+      _id
+      options
+      title
+      description
+      quantityMinimum
+      quantityMaximum
+    }
+    zone{
+      _id
+      title
+      tax
+    }
+    rating
+    isAvailable
+    openingTimes{
+      day
+      times{
+        startTime
+        endTime
+      }
+    }
+  }
+}`;
+
 export const selectAddress = `mutation SelectAddress($id:String!){
   selectAddress(id:$id){
     _id
@@ -859,6 +1020,11 @@ export const subscriptionOrder = `subscription SubscriptionOrder($id:String!){
   subscriptionOrder(id:$id){
       _id
       orderStatus
+      acceptedAt
+      pickedAt
+      deliveredAt
+      cancelledAt
+      assignedAt
       rider{
           _id
       }
@@ -998,3 +1164,124 @@ export const subscriptionNewMessage = `subscription SubscriptionNewMessage($orde
     createdAt
   }
 }`;
+
+export const createBusiness = gql`
+  mutation CreateBusiness($businessInput: BusinessInput) {
+    createBusiness(businessInput: $businessInput) {
+      message
+    }
+  }
+`;
+
+export const createRiderRegister = gql`
+  mutation CreateRiderRegister($riderRegisterInput: RiderRegisterInput) {
+    createRiderRegister(riderRegisterInput: $riderRegisterInput) {
+      message
+    }
+  }
+`;
+
+export const googleAuth = gql`
+  mutation GoogleAuth($code: String!) {
+    googleAuth(code: $code) {
+      token
+      user {
+        _id
+        name
+        email
+      }
+    }
+  }
+`;
+
+export const getCities = gql`
+  query {
+    cities {
+      _id
+      title
+      isActive
+    }
+  }
+`;
+
+export const getCityAreas = gql`
+  query AreasByCity($id: String!) {
+    areasByCity(id: $id) {
+      _id
+      title
+      address
+      city {
+        _id
+        title
+      }
+      location {
+        location {
+          coordinates
+        }
+      }
+    }
+  }
+`;
+
+export const getDeliveryCalculation = gql`
+  query GetDeliveryCalculation($input: DeliveryCalculationInput!) {
+    getDeliveryCalculation(input: $input) {
+      amount
+    }
+  }
+`;
+
+export const customerLogin = gql`
+  mutation CustomerLogin($phone: String!, $password: String!) {
+    customerLogin(phone: $phone, password: $password) {
+      token
+      user {
+        _id
+        name
+        phone
+      }
+    }
+  }
+`;
+
+export const validatePhone = gql`
+  mutation ValidatePhone($phone: String!) {
+    validatePhone(phone: $phone) {
+      message
+    }
+  }
+`;
+
+export const validatePhoneUnauth = gql`
+  mutation ValidatePhoneUnauth($phone: String!) {
+    validatePhoneUnauth(phone: $phone) {
+      message
+    }
+  }
+`;
+
+export const verifyPhoneOTP = gql`
+  mutation VerifyPhoneOTP($otp: String!, $phone: String!) {
+    verifyPhoneOTP(otp: $otp, phone: $phone) {
+      message
+    }
+  }
+`;
+
+export const createContactus = gql`
+  mutation CreateContactus(
+    $name: String
+    $email: String
+    $phone: String
+    $message: String
+  ) {
+    createContactus(
+      name: $name
+      email: $email
+      phone: $phone
+      message: $message
+    ) {
+      message
+    }
+  }
+`;

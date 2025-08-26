@@ -6,7 +6,7 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import React, { useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -16,24 +16,21 @@ import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import { useTranslation } from "react-i18next";
 import useStyles from "./styles";
 
-
-
-
 function Footer() {
-
   const { t } = useTranslation();
   const classes = useStyles();
   const theme = useTheme();
   const small = useMediaQuery(theme.breakpoints.down("md"));
   const location = useLocation();
-   const [hovered, setHovered] = useState(false);
-    const [hoveredLink, setHoveredLink] = useState(null);
+  const [hovered, setHovered] = useState(false);
+  const [hoveredLink, setHoveredLink] = useState(null);
 
-    const links = [
-      { id: 1, to: "/", label: "Home" },
-      { id: 2, to: "/privacy", label: "Privacy and policy" },
-      { id: 3, to: "/terms", label: "Terms and condition" }, // New link
-    ];
+  const links = [
+    { id: 1, to: "/", label: "Home" },
+    { id: 2, to: "/contact-us", label: "Contact us" },
+    { id: 3, to: "/privacy", label: "Privacy and policy" },
+    { id: 4, to: "/terms", label: "Terms and condition" },
+  ];
 
   const redirectHandler = (link) => {
     window.open(link, "_blank");
@@ -43,16 +40,15 @@ function Footer() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  const handleButtonClick = () => {  
-    try {  
-      window.scrollTo({ top: 0, behavior: 'smooth' });  
-    } catch (error) {  
-      console.error("Smooth scroll failed", error);  
-      // Fallback to instant scroll  
-      window.scrollTo(0, 0);  
-    }  
-  };  
-
+  const handleButtonClick = () => {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      console.error("Smooth scroll failed", error);
+      // Fallback to instant scroll
+      window.scrollTo(0, 0);
+    }
+  };
 
   return (
     <Grid container alignItems="center">
@@ -78,7 +74,6 @@ function Footer() {
           <Typography
             variant="body2"
             style={{
-              
               color: theme.palette.common.white,
               fontSize: 15,
             }}
@@ -95,26 +90,26 @@ function Footer() {
           >
             {t("linksTitle")}
           </Typography>
-         {links.map((link) => (
-        <RouterLink
-          key={link.id}
-          to={link.to}
-          onClick={handleButtonClick}
-          style={{ textDecoration: "none" }}
-          onMouseEnter={() => setHoveredLink(link.id)}
-          onMouseLeave={() => setHoveredLink(null)}
-        >
-          <Typography
-            variant="body2"
-            style={{
-              marginTop: 10,
-              color: hoveredLink === link.id ? "#8BC34A" : "#000",
-            }}
-          >
-            {t ? t(link.label) : link.label}
-          </Typography>
-        </RouterLink>
-      ))}
+          {links.map((link) => (
+            <RouterLink
+              key={link.id}
+              to={link.to}
+              onClick={handleButtonClick}
+              style={{ textDecoration: "none" }}
+              onMouseEnter={() => setHoveredLink(link.id)}
+              onMouseLeave={() => setHoveredLink(null)}
+            >
+              <Typography
+                variant="body2"
+                style={{
+                  marginTop: 10,
+                  color: hoveredLink === link.id ? "#8BC34A" : "#000",
+                }}
+              >
+                {t ? t(link.label) : link.label}
+              </Typography>
+            </RouterLink>
+          ))}
 
           <Divider
             style={{
@@ -158,27 +153,29 @@ function Footer() {
         >
           <Box
             className={classes.iconContainer}
-            onClick={() => redirectHandler("https://www.facebook.com/enatega/")}
+            onClick={() =>
+              redirectHandler("https://www.facebook.com/orderategypt")
+            }
           >
             <FacebookIcon style={{ color: theme.palette.common.white }} />
           </Box>
-          <Box
+          {/* <Box
             className={classes.iconContainer}
             style={{ marginLeft: 10 }}
             onClick={() => redirectHandler("https://twitter.com/NinjasCode1")}
           >
             <TwitterIcon style={{ color: theme.palette.common.white }} />
-          </Box>
+          </Box> */}
           <Box
             className={classes.iconContainer}
             style={{ marginLeft: 10 }}
             onClick={() =>
-              redirectHandler("https://www.instagram.com/enatega.nb/")
+              redirectHandler("https://www.instagram.com/orderategypt")
             }
           >
             <InstagramIcon style={{ color: theme.palette.common.white }} />
           </Box>
-          <Box
+          {/* <Box
             className={classes.iconContainer}
             style={{ marginLeft: 10 }}
             onClick={() =>
@@ -186,8 +183,8 @@ function Footer() {
             }
           >
             <LinkedInIcon style={{ color: theme.palette.common.white }} />
-          </Box>
-          <Box
+          </Box> */}
+          {/* <Box
             className={classes.iconContainer}
             style={{ marginLeft: 10 }}
             onClick={() =>
@@ -197,9 +194,8 @@ function Footer() {
             }
           >
             <GitHubIcon style={{ color: theme.palette.common.white }} />
-          </Box>
+          </Box> */}
         </Box>
-        
 
         <Divider
           style={{

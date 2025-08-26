@@ -4,30 +4,34 @@ import React from "react";
 import ReactDOM from "react-dom";
 import setupAplloClient from "./apollo/index";
 import App from "./App";
-import   {
-  ConfigurationProvider,
-} from "./context/Configuration";
+import { ConfigurationProvider } from "./context/Configuration";
 import { LocationProvider } from "./context/Location";
 import { UserProvider } from "./context/User";
 import "./index.css";
 import reportWebVitals from "./reportWebVitals";
 import theme from "./utils/theme";
-
+import { SearchProvider } from "./context/useSearch";
+import { ExpandProvider } from "./context/useExpand";
+import { RequestDeliveryProvider } from "./context/requestDelivery";
 
 function Main() {
- 
-
   const client = setupAplloClient();
   return (
     <ApolloProvider client={client}>
       <ConfigurationProvider>
         <StyledEngineProvider injectFirst>
           <ThemeProvider theme={theme}>
-            <UserProvider>
-              <LocationProvider>
-                <App />
-              </LocationProvider>
-            </UserProvider>
+            <RequestDeliveryProvider>
+              <UserProvider>
+                <ExpandProvider>
+                  <LocationProvider>
+                    <SearchProvider>
+                      <App />
+                    </SearchProvider>
+                  </LocationProvider>
+                </ExpandProvider>
+              </UserProvider>
+            </RequestDeliveryProvider>
           </ThemeProvider>
         </StyledEngineProvider>
       </ConfigurationProvider>

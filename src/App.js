@@ -1,6 +1,6 @@
 import { Box, CircularProgress } from "@mui/material";
 import { useJsApiLoader } from "@react-google-maps/api";
-import React, { useEffect,useContext, useState } from "react";
+import React, { useEffect, useContext, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { getToken, onMessage } from "firebase/messaging";
 import { initialize, isFirebaseSupported } from "./firebase";
@@ -25,7 +25,6 @@ import VerifyEmail from "./screens/VerifyEmail/VerifyEmail";
 import VerifyForgotOtp from "./screens/VerifyForgotOtp/VerifyForgotOtp";
 import ResetPassword from "./screens/ResetPassword/ResetPassword";
 import RestaurantDetail from "./screens/RestaurantDetail/RestaurantDetail";
-import Restaurants from "./screens/Restaurants/Restaurants";
 import Stripe from "./screens/Stripe/Stripe";
 import Terms from "./screens/Terms/Terms";
 import FlashMessage from "./components/FlashMessage";
@@ -36,11 +35,16 @@ import PrivateRoute from "./routes/PrivateRoute";
 import VerifyPhone from "./screens/VerifyPhone/VerifyPhone";
 import UserContext from "./context/User";
 import { useTranslation } from "react-i18next";
-//import { fetchConfiguration } from "./utils/helper";
-
-
-//import { Integrations } from "@sentry/tracing";
-
+import AddYourBusiness from "./screens/AddYourBusiness";
+import BusinessList from "./screens/BusinessList";
+import LandingPage from "./screens/LandingPage";
+import SignupAsRider from "./screens/SignupAsRider";
+import ContactUs from "./screens/ContactUs";
+import PickupMandoob from "./screens/DeliveryRequest/PickupMandoob";
+import DropoffMandoob from "./screens/DeliveryRequest/DropoffMandoob";
+import DeliveryRequest from "./screens/DeliveryRequest";
+import DownloadPage from "./screens/DownloadPage";
+import DownloadBusinessPage from "./screens/DownloadBusinessPage";
 const GoogleMapsLoader = ({
   children,
   LIBRARIES,
@@ -49,26 +53,6 @@ const GoogleMapsLoader = ({
 }) => {
   const [message, setMessage] = useState(null);
   const { t, i18n } = useTranslation();
-
-  //Handlers
-/*   const onWindowUpdateAmplitude = async () => {
-    const { webAmplitudeApiKey } = await fetchConfiguration();
-
-    if (webAmplitudeApiKey) {
-      // Set the API key to a global variable
-      window.amplitudeApiKey = webAmplitudeApiKey;
-
-      // Now you can initialize Amplitude
-      if (window.amplitude) {
-        window.amplitude
-          .add(window.sessionReplay.plugin({ sampleRate: 1 }))
-          .promise.then(function () {
-            window.amplitude.add(window.amplitudeAutocapturePlugin.plugin());
-            window.amplitude.init(window.amplitudeApiKey);
-          });
-      }
-    }
-  }; */
 
   useEffect(() => {
     const initializeFirebase = async () => {
@@ -119,9 +103,6 @@ const GoogleMapsLoader = ({
       }
     };
     initializeFirebase();
-
-  
-
   }, [t, i18n, VAPID_KEY]);
 
   /* ß */
@@ -134,6 +115,8 @@ const GoogleMapsLoader = ({
     id: "google-map-script",
     googleMapsApiKey: GOOGLE_MAPS_KEY,
     libraries: LIBRARIES,
+    language: "ar",
+    region: "EG",
   });
   console.log("isLoaded ", isLoaded);
   if (!isLoaded) {
@@ -165,23 +148,21 @@ const GoogleMapsLoader = ({
 };
 
 function App() {
-  const { GOOGLE_MAPS_KEY, LIBRARIES, VAPID_KEY,SENTRY_DSN } = ConfigurableValues();
+  const { GOOGLE_MAPS_KEY, LIBRARIES, VAPID_KEY, SENTRY_DSN } =
+    ConfigurableValues();
   const { isLoggedIn } = useContext(UserContext);
 
   useEffect(() => {
-  
     if (SENTRY_DSN) {
       Sentry.init({
         dsn: SENTRY_DSN,
-      //SENTRY_DSN  integrations: [new Integrations.BrowserTracing()],
+        //SENTRY_DSN  integrations: [new Integrations.BrowserTracing()],
         environment: "development",
         enableInExpoDevelopment: true,
         debug: true,
         tracesSampleRate: 1.0, // to be changed to 0.2 in production
       });
-   
     }
-
   }, [SENTRY_DSN]);
 
   return GOOGLE_MAPS_KEY ? (
@@ -192,12 +173,22 @@ function App() {
         VAPID_KEY={VAPID_KEY}
       >
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/restaurant-list" element={<Restaurants />} />
+          <Route path="/" element={isLoggedIn ? <BusinessList /> : <Home />} />
+          <Route path="/business-list" element={<BusinessList />} />
+          <Route path="/landing1" element={<LandingPage />} />
+          <Route path="/add-your-business" element={<AddYourBusiness />} />
+          <Route path="/signup-as-rider" element={<SignupAsRider />} />
           <Route path="/restaurant/:slug" element={<RestaurantDetail />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/pickup" element={<Pickup />} />
+          <Route path="/download" element={<DownloadPage />} />
+          <Route path="/download-business" element={<DownloadBusinessPage />} />
+          {/* <Route path="/otlob-mandoob" element={<DeliveryRequest />} />
+          <Route path="/otlob-mandoob/pickup" element={<PickupMandoob />} />
+          <Route path="/otlob-mandoob/dropoff" element={<DropoffMandoob />} /> */}
+          <Route path={"/verify-phone"} element={<VerifyPhone />} />
           <Route
             path={"/login"}
             element={
@@ -254,14 +245,15 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route
+          {/* <Route
             path={"/verify-phone"}
             element={
               <PrivateRoute>
                 <VerifyPhone />
               </PrivateRoute>
             }
-          />
+          /> */}
+
           <Route
             path={"/forgot-password"}
             element={

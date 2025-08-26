@@ -23,7 +23,11 @@ import React, {
   useRef,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { myOrders, placeOrder } from "../../apollo/server";
+import {
+  getDeliveryCalculation,
+  myOrders,
+  placeOrder,
+} from "../../apollo/server";
 import CodIcon from "../../assets/icons/CodIcon";
 import RiderImage from "../../assets/images/rider.png";
 import MarkerImage from "../../assets/images/marker.png";
@@ -35,7 +39,6 @@ import {
   OrderOption,
 } from "../../components/Checkout";
 import CloseIcon from "@mui/icons-material/Close";
-
 import FlashMessage from "../../components/FlashMessage";
 import Footer from "../../components/Footer/Footer";
 import { Header } from "../../components/Header";
@@ -48,18 +51,17 @@ import { DAYS } from "../../utils/constantValues";
 import { paypalCurrencies, stripeCurrencies } from "../../utils/currencies";
 import { calculateDistance, calculateAmount } from "../../utils/customFunction";
 import useStyle from "./styles";
-
 // import Analytics from "../../utils/analytics";
 import { GoogleMap, Marker } from "@react-google-maps/api";
 import { mapStyles } from "../OrderDetail/mapStyles";
 import RestMarker from "../../assets/images/rest-map-2.png";
 import NearMeIcon from "@mui/icons-material/NearMe";
 import clsx from "clsx";
-
 import { useLocation } from "../../hooks";
 import { useTranslation } from "react-i18next";
-
 import moment from "moment";
+import { direction } from "../../utils/helper";
+import { useQuery } from "@apollo/client";
 
 const PLACEORDER = gql`
   ${placeOrder}
@@ -76,7 +78,8 @@ const PAYMENT = {
 };
 
 function Checkout() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const { language } = i18n;
   const classes = useStyle();
   const navigate = useNavigate();
   const [isClose, setIsClose] = useState(false);
@@ -100,7 +103,6 @@ function Checkout() {
   } = useContext(UserContext);
 
   const { location, setLocation } = useLocationContext();
-  console.log(location ,"location divya");
   // const { getCurrentLocation } = useLocation();
   const theme = useTheme();
   const [minimumOrder, setMinimumOrder] = useState("");
@@ -113,10 +115,11 @@ function Checkout() {
   const [isPickUp, setIsPickUp] = useState(false);
   const [deliveryCharges, setDeliveryCharges] = useState(0);
   const [shouldAddMinimumFee, setShouldAddMinimumFee] = useState(false);
-
-  let restCoordinates = {};
-  const { loading, data, error } = useRestaurant(cartRestaurant);
+  const restaurantId = localStorage.getItem("restaurant");
+  const [restCoordinates, setRestCoordinates] = useState(null);
+  const { loading, data, error } = useRestaurant(restaurantId);
   const extraSmall = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [mutateOrder, { loading: loadingOrderMutation }] = useMutation(
     PLACEORDER,
     {
@@ -125,6 +128,24 @@ function Checkout() {
       update,
     }
   );
+
+  const {
+    data: calcData,
+    loading: calcLoading,
+    error: errorCalc,
+  } = useQuery(getDeliveryCalculation, {
+    skip: !data,
+    variables: {
+      input: {
+        destLong: Number(location.longitude),
+        destLat: Number(location.latitude),
+        originLong: Number(data?.restaurantCustomer.location.coordinates[0]),
+        originLat: Number(data?.restaurantCustomer.location.coordinates[1]),
+        restaurantId,
+      },
+    },
+  });
+
   useEffect(() => {
     if (!location) {
       let localStorageLocation = localStorage.getItem("location");
@@ -136,36 +157,17 @@ function Checkout() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      if (data && data.restaurant) {
-        const latOrigin = Number(data.restaurant.location.coordinates[1]);
-        const lonOrigin = Number(data.restaurant.location.coordinates[0]);
-        const latDest = Number(location.latitude);
-        const longDest = Number(location.longitude);
-  
-        // Calculate distance between origin and destination
-        const distance = await calculateDistance(latOrigin, lonOrigin, latDest, longDest);
-  
-        let deliveryCharges;
-  
-        if (distance < 2) {
-          // For distances less than 2 km, set deliveryCharges to minimumDeliveryFee
-          deliveryCharges = configuration.minimumDeliveryFee;
-        } else {
-          // For distances greater than or equal to 2 km, calculate delivery charges
-          const costType = configuration.costType;
-          const calculatedAmount = calculateAmount(costType, configuration.deliveryRate, distance);
-  
-          // Ensure that the calculated fee is not less than the minimum fee
-          deliveryCharges = Math.max(calculatedAmount, configuration.minimumDeliveryFee);
-        }
-  
-        // Set the delivery charges state
-        setDeliveryCharges(deliveryCharges);
-      }
-    })();
-  }, [data, location, configuration]); // Re-run effect when data, location, or configuration changes
-  
+    if (calcData) {
+      const amount = calcData.getDeliveryCalculation.amount;
+      setDeliveryCharges(amount);
+      // setDeliveryCharges(
+      //   amount >= configuration.minimumDeliveryFee
+      //     ? amount
+      //     : configuration.minimumDeliveryFee
+      // );
+    }
+  }, [calcData]);
+
   const onLoad = useCallback(
     (map) => {
       const bounds = new window.google.maps.LatLngBounds();
@@ -179,7 +181,7 @@ function Checkout() {
     const day = date.getDay();
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    const todaysTimings = data.restaurant.openingTimes.find(
+    const todaysTimings = data?.restaurantCustomer.openingTimes.find(
       (o) => o.day === DAYS[day]
     );
     const times = todaysTimings.times.filter(
@@ -192,6 +194,7 @@ function Checkout() {
 
     return times.length > 0;
   };
+
   const toggleAdressModal = useCallback(() => {
     setAddressModal((prev) => !prev);
   }, []);
@@ -200,8 +203,8 @@ function Checkout() {
     if (cart && cartCount > 0) {
       if (
         data &&
-        data.restaurant &&
-        (!data.restaurant.isAvailable || !isOpen())
+        data?.restaurantCustomer &&
+        (!data?.restaurantCustomer.isAvailable || !isOpen())
       ) {
         setIsClose((prev) => {
           if (!prev) return true;
@@ -210,6 +213,16 @@ function Checkout() {
       }
     }
   }, [data]);
+
+  useEffect(() => {
+    const restCoords = {
+      lat: parseFloat(data?.restaurantCustomer.location.coordinates[1]),
+      lng: parseFloat(data?.restaurantCustomer.location.coordinates[0]),
+    };
+    setRestCoordinates(restCoords);
+  }, [data?.restaurantCustomer?.location]);
+
+  console.log({ restCoordinates });
 
   const setDeliveryAddress = (item) => {
     setSelectedAddress(item);
@@ -227,7 +240,7 @@ function Checkout() {
     setIsClose((prev) => !prev);
   }, []);
 
-  const restaurantData = data?.restaurant ?? null;
+  const restaurantData = data?.restaurantCustomer ?? null;
 
   const showMessage = useCallback((messageObj) => {
     setMainError(messageObj);
@@ -239,7 +252,7 @@ function Checkout() {
 
   if (loading || loadingData) {
     return (
-      <Grid container>
+      <Grid dir={direction(language)} container>
         <Header />
         <Box className={classes.spinnerContainer}>
           <CircularProgress color="primary" size={48} />
@@ -250,7 +263,7 @@ function Checkout() {
 
   if (error) {
     return (
-      <Grid container>
+      <Grid dir={direction(language)} container>
         <Header />
         <Box className={classes.spinnerContainer}>
           <Typography>Unable to fetch data</Typography>
@@ -258,10 +271,6 @@ function Checkout() {
       </Grid>
     );
   }
-  restCoordinates = {
-    lat: parseFloat(data.restaurant.location.coordinates[1]),
-    lng: parseFloat(data.restaurant.location.coordinates[0]),
-  };
 
   function update(cache, { data: { placeOrder } }) {
     console.log("update divya");
@@ -308,26 +317,11 @@ function Checkout() {
     const delivery = isPickUp ? 0 : deliveryCharges;
     const amount = +calculatePrice(delivery, true);
     const taxAmount = ((amount / 100) * tax).toFixed(2);
-    console.log("tax:", {taxAmount, deliveryCharges, tax, amount})
+    console.log("tax:", { taxAmount, deliveryCharges, tax, amount });
     return taxAmount;
   }
+
   async function onCompleted(data) {
-    // await Analytics.track(Analytics.events.ORDER_PLACED, {
-    //   userId: data.placeOrder.user._id,
-    //   name: data.placeOrder.user.name,
-    //   email: data.placeOrder.user.email,
-    //   phoneNumber: data.placeOrder.user.phone,
-    //   orderId: data.placeOrder.orderId,
-    //   restaurantName: data.placeOrder.restaurant.name,
-    //   restaurantAddress: data.placeOrder.restaurant.address,
-    //   orderItems: data.placeOrder.items,
-    //   orderPaymentMethod: data.placeOrder.paymentMethod,
-    //   orderAmount: data.placeOrder.orderAmount,
-    //   orderPaidAmount: data.placeOrder.paidAmount,
-    //   tipping: data.placeOrder.tipping,
-    //   orderStatus: data.placeOrder.orderStatus,
-    //   orderDate: data.placeOrder.orderDate,
-    // });
     if (paymentMethod.payment === "COD") {
       await clearCart();
       navigate(`/order-detail/${data.placeOrder._id}`, { replace: true });
@@ -341,28 +335,27 @@ function Checkout() {
   function calculatePrice(delivery = 0, withDiscount) {
     let itemTotal = 0;
     cart.forEach((cartItem) => {
-      console.log(cartItem)
       itemTotal += cartItem.price * cartItem.quantity;
     });
     if (withDiscount && coupon && coupon.discount) {
       itemTotal = itemTotal - (coupon.discount / 100) * itemTotal;
     }
     const deliveryAmount = delivery > 0 ? deliveryCharges : 0;
-    console.log("price:", {itemTotal, deliveryAmount})
     return (itemTotal + deliveryAmount).toFixed(2);
   }
 
-function calculateTotal() {
-  let total = 0;
-  const delivery = isPickUp ? 0 : deliveryCharges;
-  total += +calculatePrice(delivery, true);
-  total += +taxCalculation();
-  total += +calculateTip();
-  if (shouldAddMinimumFee) {
-    total += +configuration.minimumDeliveryFee;
+  function calculateTotal() {
+    let total = 0;
+    const delivery = isPickUp ? 0 : deliveryCharges;
+    total += +calculatePrice(delivery, true);
+    total += +taxCalculation();
+    total += +calculateTip();
+    if (shouldAddMinimumFee) {
+      total += +configuration.minimumDeliveryFee;
+    }
+    return parseFloat(total).toFixed(2);
   }
-  return parseFloat(total).toFixed(2);
-}
+
   function transformOrder(cartData) {
     return cartData.map((food) => {
       return {
@@ -408,9 +401,10 @@ function calculateTotal() {
             // longitude:  location.longitude,
             // latitude:   location.latitude,
             longitude: location.longitude.toString(), // Convert longitude to string
-            latitude: location.latitude.toString(),   // Convert latitude to string
+            latitude: location.latitude.toString(), // Convert latitude to string
             selected: true,
           },
+          // total: calculateTotal(),
           orderDate: selectedDate,
           isPickedUp: isPickUp,
           deliveryCharges: isPickUp ? 0 : deliveryCharges,
@@ -464,7 +458,7 @@ function calculateTotal() {
   };
 
   function validateOrder() {
-    if (!data.restaurant.isAvailable || !isOpen()) {
+    if (!data?.restaurantCustomer.isAvailable || !isOpen()) {
       toggleCloseModal();
       return;
     }
@@ -519,16 +513,20 @@ function calculateTotal() {
       });
 
       setTimeout(() => {
-        navigate("/phone-number");
+        navigate("/verify-phone", {
+          state: {
+            checkoutPage: true,
+          },
+        });
       }, 1000);
 
       return false;
     }
     return true;
   }
-  // console.log("isPickUp", isPickUp, selectedDate);
+
   return (
-    <Grid container className={classes.root}>
+    <Grid dir={direction(language)} container className={classes.root}>
       <FlashMessage
         open={Boolean(mainError.type)}
         severity={mainError.type}
@@ -546,33 +544,34 @@ function calculateTotal() {
       >
         <Grid container item>
           <Grid item xs={12} className={classes.topContainer}>
-            <GoogleMap
-              mapContainerStyle={{
-                height: "450px",
-                width: "100%",
-              }}
-              zoom={14}
-              center={restCoordinates}
-              onLoad={restCoordinates && onLoad}
-              options={{
-                styles: mapStyles,
-                zoomControl: true,
-                zoomControlOptions: {
-                  position: window.google.maps.ControlPosition.RIGHT_CENTER,
-                },
-              }}
-            >
-              {location && (
-                <Marker
-                  position={{
-                    lat: location?.latitude,
-                    lng: location?.longitude,
-                  }}
-                  icon={MarkerImage}
-                />
-              )}
-              <Marker position={restCoordinates} icon={RestMarker} />
-            </GoogleMap>
+            {restCoordinates ? (
+              <GoogleMap
+                mapContainerStyle={{
+                  height: "450px",
+                  width: "100%",
+                }}
+                zoom={14}
+                center={restCoordinates}
+                options={{
+                  // styles: mapStyles,
+                  zoomControl: true,
+                  zoomControlOptions: {
+                    position: window.google.maps.ControlPosition.RIGHT_CENTER,
+                  },
+                }}
+              >
+                {location && (
+                  <Marker
+                    position={{
+                      lat: location?.latitude,
+                      lng: location?.longitude,
+                    }}
+                    icon={MarkerImage}
+                  />
+                )}
+                <Marker position={restCoordinates} icon={RestMarker} />
+              </GoogleMap>
+            ) : null}
           </Grid>
         </Grid>
         <Container maxWidth="md" className={classes.containerCard}>
@@ -589,7 +588,7 @@ function calculateTotal() {
               justifyContent="center"
               flexDirection="column"
               style={{
-                marginLeft: "20px",
+                marginInlineStart: "20px",
               }}
             >
               <Typography
@@ -626,7 +625,7 @@ function calculateTotal() {
                 <Button
                   variant="contained"
                   style={{
-                    marginLeft: theme.spacing(1),
+                    marginInlineStart: theme.spacing(1),
                     backgroundColor: "black",
                     borderRadius: theme.spacing(1.5),
                   }}
@@ -711,12 +710,12 @@ function calculateTotal() {
                         <Typography
                           style={{
                             color: theme.palette.common.black,
-                            marginLeft: 10,
+                            marginInlineStart: 10,
                           }}
                           variant="caption"
                           fontWeight={800}
                         >
-                          {location?.label}
+                          {`(${location?.label})`}
                         </Typography>
                       </Box>
                       <Typography
@@ -726,6 +725,7 @@ function calculateTotal() {
                       >
                         {location?.deliveryAddress}
                       </Typography>
+                      <Divider />
                     </Box>
 
                     <Grid
@@ -736,7 +736,7 @@ function calculateTotal() {
                       style={{
                         background: theme.palette.common.white,
                         padding: theme.spacing(2, 0),
-                        marginLeft: "20px",
+                        marginInlineStart: "20px",
                       }}
                     >
                       <Paper
@@ -806,6 +806,7 @@ function calculateTotal() {
                 onPayment={onPayment}
                 loading={loadingOrderMutation}
                 calculateTotal={calculateTotal}
+                hasItems={cart?.length}
               />
             </Grid>
           </Grid>

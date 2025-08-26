@@ -6,6 +6,7 @@ import {
   useTheme,
   useMediaQuery,
   Typography,
+  Paper,
 } from "@mui/material";
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import FlashMessage from "../../components/FlashMessage";
@@ -28,27 +29,62 @@ import Fruits2 from "../../assets/images/fruits-2.png";
 import AppComponent from "../../components/HomeScreen/AppComponent";
 import Banner2 from "../../assets/images/banner-2.png";
 import Banner1 from "../../assets/images/banner-1.png";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import HeroSection from "../../components/HeroSection";
+import { direction } from "../../utils/helper";
+import { useQuery } from "@apollo/client";
+import { getCities } from "../../apollo/server";
+import DialogAreaSelect from "../../components/HomeScreen/DialogAreaSelect";
+import AppsSection from "../../components/HomeScreen/AppsSection";
 
 function Home() {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation();
+  const { language } = i18n;
   const classes = useStyles();
   const theme = useTheme();
   const small = useMediaQuery(theme.breakpoints.down("md"));
   const medium = useMediaQuery(theme.breakpoints.down("lg"));
+
+  const {
+    data,
+    error: errorCities,
+    loading: loadingCities,
+  } = useQuery(getCities);
+
+  console.log({ data });
+
+  const cities = data?.cities || null;
+  const [selectedCity, setSelectedCity] = useState(null);
+  const [openAreaModal, setOpenAreaModal] = useState(false);
+
+  const [body, setBody] = useState([
+    {
+      image:
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      title: t("your_restaurant"),
+      subtitle: t("add_your_restaurant"),
+      link: "/add-your-business",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1617347454431-f49d7ff5c3b1?q=80&w=2015&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      title: t("deliver_with_orderat"),
+      subtitle: t("signup_to_deliver"),
+      link: "/signup-as-rider",
+    },
+  ]);
 
   const { error, loading } = useLocation();
   const [open, setOpen] = useState(!!error);
   const { isLoggedIn } = useContext(UserContext);
   let check = false;
 
-
   const handleClose = useCallback(() => {
     setOpen(false);
+    setOpenAreaModal(false);
   }, []);
-  useEffect(async () => {
-    // await Analytics.track(Analytics.events.NAVIGATE_TO_HOME);
-  }, []);
+
   useEffect(() => {
     if (check) {
       setOpen(!!error);
@@ -57,6 +93,11 @@ function Home() {
     }
   }, [error]);
 
+  const handleCitySelect = (itemId) => {
+    console.log({ itemId });
+    setSelectedCity(itemId);
+    setOpenAreaModal(true);
+  };
 
   return (
     <Sentry.ErrorBoundary fallback={<p>An error has occurred</p>}>
@@ -69,158 +110,118 @@ function Home() {
         />
         {isLoggedIn ? <Header /> : <LoginHeader showIcon />}
         {/* serch container (1st) */}
+        {/* <HeroSection /> */}
         <Box>
           <Grid container item>
             <SearchContainer loading={loading} isHome={true} />
           </Grid>
         </Box>
-        {/* app container (2nd) */}
-        <Box className={classes.appContainer}>
+
+        {/* cities */}
+        {data?.cities ? (
           <Box
-            className={classes.appWrapper}
-            style={{
-              paddingTop: medium ? "8rem" : 0,
-              zIndex: 10,
+            dir={direction(language)}
+            sx={{
+              maxWidth: "1200px",
+              marginInline: "auto",
+              marginTop: "50px",
             }}
           >
-            <img src={Fruits2} alt="fruits2" className={classes.upperFruits} />
-            {!medium && (
-              <Box
-                className={classes.bannerContainer}
-                display={"flex"}
-                alignItems={"flex-start"}
-              >
-                <img
-                  src={Banner2}
-                  alt="banner2"
-                  className={classes.bannerOne}
-                />
-                <img
-                  src={Banner1}
-                  alt="banner1"
-                  className={classes.bannerTwo}
-                />
-              </Box>
-            )}
-
-            <AppComponent />
-          </Box>
-        </Box>
-        {/* card container (3rd) */}
-        <Box className={classes.cardContainer}>
-          <Box className={classes.cardWrapper}>
-            <Typography
-              className={small ? classes.bgTextSmall : classes.bgText}
-              style={{ top: "3%", right: "8%" }}
-            >
-              FEATURES
+            <Typography variant="h5" sx={{ marginInlineStart: 2 }}>
+              {t("cities_serving")}
             </Typography>
-            <Container className={classes.topBottomMargin}>
-              <Grid container justify="flex-end" spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Box
-                    display="flex"
-                    justifyContent={small ? "flex-end" : "flex-start"}
-                  >
-                    <CategoryCards
-                      title={"Rider App"}
-                      image={RiderApp}
-                      description={[
-                        "• "+t('findingAddress'),
-                        "• "+t('zonesFunctionality'),
-                      ]}
-                      android={
-                        "https://play.google.com/store/apps/details?id=com.enatega.multirider"
-                      }
-                      ios={
-                        "https://apps.apple.com/pk/app/enatega-mulitvendor-rider/id1526674511"
-                      }
-                      isMobile={true}
-                    />
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box mt={small ? 15 : 0} />
-                  <Box
-                    display="flex"
-                    justifyContent={small ? "flex-start" : "flex-end"}
-                  >
-                    <CategoryCards
-                      title={"Restaurant App"}
-                      image={RestaurantApp}
-                      description={[
-                        "• "+t('multipleRestaurants'),
-                        "• "+t('realTimeOrder'),
-                      ]}
-                      android={
-                        "https://play.google.com/store/apps/details?id=multivendor.enatega.restaurant"
-                      }
-                      ios={
-                        "https://apps.apple.com/pk/app/enatega-multivendor-restaurant/id1526672537"
-                      }
-                      isMobile={true}
-                    />
-                  </Box>
-                </Grid>
-                <Box mt={5} />
-                <Grid item xs={12}>
-                  <Box mt={small ? 15 : 0} />
-                  <Box
-                    display="flex"
-                    justifyContent={small ? "flex-end" : "center"}
-                  >
-                    <CategoryCards
-                      title={"Customer App"}
-                      image={CustApp}
-                      description={[
-                        "• "+t('differentSections'),
-                        "• "+t('previousOrder'),
-                      ]}
-                      android={
-                        "https://play.google.com/store/apps/details?id=com.enatega.multivendor"
-                      }
-                      ios={
-                        "https://apps.apple.com/pk/app/enatega-multivendor/id1526488093"
-                      }
-                      isMobile={true}
-                    />
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box mt={small ? 15 : 0} />
-
-                  <CategoryCards
-                    title={"Admin Dashboard"}
-                    image={Dashboard}
-                    description={[
-                      "• "+t('findingAddress'),
-                      "• "+t('zonesFunctionality'),
-                    ]}
-                    web={true}
-                    link={"https://multivendor-admin.enatega.com/"}
-                    isMobile={false}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box mt={small ? 15 : 0} />
-                  <Box display="flex" justifyContent="flex-end">
-                    <CategoryCards
-                      title={"Product Page"}
-                      image={WebApp}
-                      description={[
-                        "• "+t('ourDelivery'),
-                        "• "+t('builtOnCommunity'),
-                      ]}
-                      web={true}
-                      link={"https://enatega.com/"}
-                      isMobile={false}
-                    />
-                  </Box>
-                </Grid>
-              </Grid>
-            </Container>
+            {errorCities && <Typography>{errorCities}</Typography>}
+            <Grid container spacing={2} my={2}>
+              {cities?.map((item) => {
+                if (item?.isActive) {
+                  return (
+                    <Grid
+                      sm={12}
+                      md={6}
+                      lg={4}
+                      key={item._id}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <Paper
+                        sx={{
+                          marginInline: 2,
+                          padding: 2,
+                          mb: 2,
+                          backgroundColor: "#8BC34A",
+                        }}
+                        onClick={() => handleCitySelect(item._id)}
+                      >
+                        <Typography sx={{ color: "#fff" }}>
+                          {item.title}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  );
+                }
+              })}
+            </Grid>
           </Box>
+        ) : null}
+
+        {/* dialog area select */}
+        <DialogAreaSelect
+          open={openAreaModal}
+          handleClose={handleClose}
+          cityId={selectedCity}
+          setSelectedCity={setSelectedCity}
+          cities={cities}
+        />
+
+        <Box
+          sx={{
+            maxWidth: "1500px",
+            marginInline: "auto",
+            marginTop: "50px",
+          }}
+        >
+          <Grid container spacing={2} sx={{ paddingInline: { sm: 2, md: 4 } }}>
+            {body?.map((item, index) => {
+              return (
+                <Grid
+                  dir={direction(language)}
+                  key={index}
+                  item
+                  xs={12}
+                  sm={6}
+                  md={6}
+                >
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: "300px",
+                    }}
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5">{item.title}</Typography>
+                    <Link
+                      to={item.link}
+                      style={{ fontSize: 17, color: "#000" }}
+                    >
+                      {item.subtitle}
+                    </Link>
+                  </Box>
+                </Grid>
+              );
+            })}
+          </Grid>
         </Box>
+        {/* download apps section */}
+        <AppsSection />
 
         <Box className={classes.footerContainer}>
           <Box className={classes.footerWrapper}>

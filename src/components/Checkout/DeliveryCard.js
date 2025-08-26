@@ -9,6 +9,7 @@ import {
   Paper,
   Typography,
   useTheme,
+  Divider,
 } from "@mui/material";
 import clsx from "clsx";
 import React, {
@@ -32,6 +33,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useLocationContext } from "../../context/Location";
 import { useTranslation } from "react-i18next";
 import HomeIcon from "@mui/icons-material/Home";
+import { Fragment } from "react";
 const LATITUDE = 33.7001019;
 const LONGITUDE = 72.9735978;
 
@@ -69,11 +71,12 @@ function DeliveryCard({
   }, [location]);
 
   useEffect(() => {
-    if (profile?.addresses < 1) {
+    if (profile?.addresses?.length < 1) {
       toggleShowDetail();
-    } else {
-      setSelectedAddress(profile?.addresses[0]);
     }
+    // else {
+    //   setSelectedAddress(profile?.addresses[0]);
+    // }
   }, [profile]);
 
   const currentLocation = useCallback(() => {
@@ -155,12 +158,14 @@ function DeliveryCard({
         >
           <Container>
             {showDetail ? (
-              <AddressDetail
-                toggleDetail={toggleShowDetail}
-                addressDetail={addressInfo}
-                locationModal={toggleAddressModal}
-                notification={setMainError}
-              />
+              <Fragment>
+                <AddressDetail
+                  toggleDetail={toggleShowDetail}
+                  addressDetail={addressInfo}
+                  locationModal={toggleAddressModal}
+                  notification={setMainError}
+                />
+              </Fragment>
             ) : (
               <>
                 <Grid container spacing={2}>
@@ -203,18 +208,41 @@ function DeliveryCard({
                                   height={100}
                                   style={{ color: theme.palette.common.black }}
                                 />
-                                <Typography
-                                  variant="subtitle2"
-                                  color="textSecondary"
-                                  align="left"
-                                  className={clsx(
-                                    classes.smallText,
-                                    classes.PH1,
-                                    classes.wieght600
-                                  )}
-                                >
-                                  {item.deliveryAddress}
-                                </Typography>
+                                <Box marginInlineStart={1}>
+                                  <Typography
+                                    variant="subtitle2"
+                                    color="textSecondary"
+                                    align="left"
+                                    className={clsx(
+                                      classes.smallText,
+                                      classes.PH1,
+                                      classes.wieght600
+                                    )}
+                                  >
+                                    {item.deliveryAddress} -{" "}
+                                    <span
+                                      style={{ color: "red" }}
+                                    >{`(${item.label})`}</span>
+                                  </Typography>
+                                  {item.deliveryAddress !== item.details ? (
+                                    <Fragment>
+                                      {" "}
+                                      <Divider sx={{ my: 1, mx: "auto" }} />
+                                      <Typography
+                                        variant="subtitle2"
+                                        color="textSecondary"
+                                        align="left"
+                                        className={clsx(
+                                          classes.smallText,
+                                          classes.PH1,
+                                          classes.wieght600
+                                        )}
+                                      >
+                                        {item.details}
+                                      </Typography>{" "}
+                                    </Fragment>
+                                  ) : null}
+                                </Box>
                               </Box>
                             </Box>
                           </Paper>

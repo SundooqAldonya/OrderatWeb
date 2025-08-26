@@ -30,24 +30,34 @@ function CartView(props) {
     updateCart,
   } = useContext(UserContext);
   const { data } = useRestaurant(cartRestaurant);
-  const restaurantData = data?.restaurant ?? null;
+  console.log({ restaurantData: data });
+  // console.log({ cartRestaurant });
+  const restaurantData = data?.restaurantCustomer ?? null;
 
   useEffect(() => {
-    if (restaurantData) didFocus();
+    if (restaurantData) {
+      console.log("here in cart");
+
+      didFocus();
+    }
   }, [restaurantData, cartCount]);
 
   const didFocus = async () => {
     const foods = restaurantData.categories.map((c) => c.foods.flat()).flat();
     const { addons, options } = restaurantData;
-
+    console.log({ foods });
     try {
       if (cart && cartCount) {
         const transformCart = cart.map((cartItem) => {
           const foodItem = foods.find((food) => food._id === cartItem._id);
+          console.log({ foodItem });
+
           if (!foodItem) return null;
           const variationItem = foodItem.variations.find(
             (variation) => variation._id === cartItem.variation._id
           );
+          console.log({ variationItem });
+
           if (!variationItem) return null;
           const foodItemTitle = `${foodItem.title}${
             variationItem.title ? `(${variationItem.title})` : ""
@@ -84,6 +94,7 @@ function CartView(props) {
           if (prev) return false;
           else return prev;
         });
+
         if (transformCart.length !== updatedItems.length) {
           props.showMessage({
             type: t("warning"),
@@ -97,10 +108,8 @@ function CartView(props) {
         message: e.message,
       });
     } finally {
-      setLoadingData((prev) => {
-        if (prev) return false;
-        else return prev;
-      });
+      // setLoadingData(!loadingData);
+      setLoadingData(false);
     }
   };
 
@@ -133,7 +142,7 @@ function CartView(props) {
           justifyContent="center"
           flexDirection="column"
           style={{
-            marginLeft: "5px",
+            marginInlineStart: "5px",
           }}
         >
           <Typography
@@ -191,6 +200,7 @@ function CartView(props) {
             removeQuantity={() => {
               removeQuantity(foodItem.key);
             }}
+            instructions={foodItem?.specialInstructions}
           />
         ))}
       </Container>

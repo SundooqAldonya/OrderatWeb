@@ -12,11 +12,12 @@ import {
 import gql from "graphql-tag";
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { getTaxation } from "../../../apollo/server";
+import { getDeliveryCalculation, getTaxation } from "../../../apollo/server";
 import ConfigurationContext from "../../../context/Configuration";
 import UserContext from "../../../context/User";
 import { useRestaurant } from "../../../hooks";
 import useStyles from "./styles";
+import { Fragment } from "react";
 
 const TAXATION = gql`
   ${getTaxation}
@@ -38,10 +39,50 @@ function MRestaurantCart(props) {
     fetchPolicy: "network-only",
   });
   const { loading, data } = useRestaurant(cartRestaurant);
-  const restaurantData = data?.restaurant ?? null;
+  const [deliveryCharges, setDeliveryCharges] = useState(0);
+  const restaurantData = data?.restaurantCustomer ?? null;
+  const location = JSON.parse(localStorage.getItem("location"));
+
+  const {
+    data: calcData,
+    loading: calcLoading,
+    error: errorCalc,
+  } = useQuery(getDeliveryCalculation, {
+    skip: !restaurantData,
+    variables: {
+      input: {
+        destLong: Number(location.longitude),
+        destLat: Number(location.latitude),
+        originLong: Number(restaurantData?.location.coordinates[0]),
+        originLat: Number(restaurantData?.location.coordinates[1]),
+        restaurantId: restaurantData?._id,
+      },
+    },
+  });
+
+  console.log({
+    calcData,
+    originLong: restaurantData?.location.coordinates[0],
+    originLat: restaurantData?.location.coordinates[1],
+  });
 
   useEffect(() => {
-    if (restaurantData) didFocus();
+    if (calcData) {
+      const amount = calcData.getDeliveryCalculation.amount;
+      setDeliveryCharges(amount);
+      // setDeliveryCharges(
+      //   amount >= configuration.minimumDeliveryFee
+      //     ? amount
+      //     : configuration.minimumDeliveryFee
+      // );
+    }
+  }, [calcData]);
+
+  useEffect(() => {
+    if (restaurantData) {
+      console.log("here");
+      didFocus();
+    }
   }, [restaurantData, cartCount]);
 
   const didFocus = async () => {
@@ -51,6 +92,8 @@ function MRestaurantCart(props) {
       if (cart && cartCount) {
         const transformCart = cart.map((cartItem) => {
           const foodItem = foods.find((food) => food._id === cartItem._id);
+          console.log({ foodItem });
+
           if (!foodItem) return null;
           const variationItem = foodItem.variations.find(
             (variation) => variation._id === cartItem.variation._id
@@ -85,10 +128,10 @@ function MRestaurantCart(props) {
         const updatedItems = transformCart.filter((item) => item);
         if (updatedItems.length === 0) await clearCart();
         await updateCart(updatedItems);
-        setLoadingData((prev) => {
-          if (prev) return false;
-          else return prev;
-        });
+        // setLoadingData((prev) => {
+        //   if (prev) return false;
+        //   else return prev;
+        // });
         if (transformCart.length !== updatedItems.length) {
           props.showMessage({
             type: "warning",
@@ -102,22 +145,22 @@ function MRestaurantCart(props) {
         message: e.message,
       });
     } finally {
-      setLoadingData((prev) => {
-        if (prev) return false;
-        else return prev;
-      });
+      setLoadingData(false);
     }
   };
 
   const calculatePrice = useMemo(
-    () => () => {
-      let itemTotal = 0;
-      cart.forEach((cartItem) => {
-        itemTotal += cartItem.price * cartItem.quantity;
-      });
-      return itemTotal.toFixed(2);
-    },
-    [cart]
+    () =>
+      (amount = 0) => {
+        let itemTotal = 0;
+        cart.forEach((cartItem) => {
+          itemTotal += cartItem.price * cartItem.quantity;
+        });
+        const deliveryAmount = amount > 0 ? deliveryCharges : 0;
+        return (itemTotal + deliveryAmount).toFixed(2);
+        // return itemTotal.toFixed(2);
+      },
+    [deliveryCharges, cart]
   );
 
   const taxCalculation = useMemo(
@@ -136,17 +179,18 @@ function MRestaurantCart(props) {
   const calculateTotal = useMemo(
     () => () => {
       let total = 0;
-      total += +calculatePrice();
+      total += +calculatePrice(deliveryCharges);
       total += +taxCalculation();
-      total += +configuration.minimumDeliveryFee;
+      // total += +configuration.minimumDeliveryFee;
       return parseFloat(total).toFixed(2);
     },
     // configuration.minimumDeliveryFee
-    [calculatePrice, taxCalculation,configuration.minimumDeliveryFee]
+    [calculatePrice, taxCalculation, configuration.minimumDeliveryFee]
   );
 
   return (
-    <Hidden lgUp>
+    <Fragment>
+      {/* <Hidden lgUp> */}
       <RouterLink
         to={loadingTax ? "#" : "/checkout"}
         style={{ textDecoration: "none" }}
@@ -259,7 +303,8 @@ function MRestaurantCart(props) {
           )}
         </Box>
       </RouterLink>
-    </Hidden>
+      {/* </Hidden> */}
+    </Fragment>
   );
 }
 

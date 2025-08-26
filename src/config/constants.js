@@ -2,24 +2,31 @@
 import React, { useContext } from "react";
 import ConfigurationContext from "../../src/context/Configuration";
 
+const LIBRARIES = ["places", "drawing", "geometry", "visualization"];
+
 const ConfigurableValues = () => {
   const configuration = useContext(ConfigurationContext);
 
   // const SERVER_URL = "https://enatega-multivendor.up.railway.app/";
   // const WS_SERVER_URL = "wss://enatega-multivendor.up.railway.app/";
-  //const SERVER_URL = 'https://query.orderat.ai/'
-  const SERVER_URL = 'https://query.orderat.ai/'
-  const WS_SERVER_URL = 'wss://query.orderat.ai/'
+  // const SERVER_URL = "https://query.orderat.ai/";
+  // const WS_SERVER_URL = "wss://query.orderat.ai/";
+  let SERVER_URL, WS_SERVER_URL;
+  console.log("NODE_ENV", process.env.NODE_ENV);
+  if (process.env.NODE_ENV === "development") {
+    SERVER_URL = "http://localhost:8001/";
+    WS_SERVER_URL = "ws://localhost:8001/";
+  } else {
+    SERVER_URL = "https://query.orderat.ai/";
+    WS_SERVER_URL = "wss://query.orderat.ai/";
+  }
 
-  
   const GOOGLE_CLIENT_ID = configuration?.webClientID;
   const STRIPE_PUBLIC_KEY = configuration?.publishableKey;
   const PAYPAL_KEY = configuration?.clientId;
-  const GOOGLE_MAPS_KEY = configuration?.googleApiKey ??  '' ;
+  const GOOGLE_MAPS_KEY = configuration?.googleApiKey ?? "";
   const AMPLITUDE_API_KEY = configuration?.webAmplitudeApiKey;
-  const LIBRARIES = "places,drawing,geometry,localContext,visualization".split(
-    ","
-  );
+
   const COLORS = {
     GOOGLE: configuration?.googleColor,
   };
@@ -41,7 +48,7 @@ const ConfigurableValues = () => {
     PAYPAL_KEY,
     GOOGLE_MAPS_KEY,
     AMPLITUDE_API_KEY,
-    COLORS
+    COLORS,
   };
 };
 

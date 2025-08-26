@@ -22,7 +22,6 @@ import {
   ModalView,
 } from "../../components/Orders";
 import UserContext from "../../context/User";
-// import Analytics from "../../utils/analytics";
 import { ORDER_STATUS } from "../../utils/constantValues";
 import Background from "./Background";
 import useStyles from "./styles";
@@ -34,8 +33,8 @@ import RestMarker from "../../assets/images/rest-map-2.png";
 import DestMarker from "../../assets/images/dest-map-2.png";
 import MarkerImage from "../../assets/images/marker.png";
 import TrackingRider from "../../components/Orders/OrderDetail/TrackingRider";
-import { useSubscription } from "@apollo/client";
-import { subscriptionOrder } from "../../apollo/server";
+import { useLazyQuery, useQuery, useSubscription } from "@apollo/client";
+import { singleOrder, subscriptionOrder } from "../../apollo/server";
 import gql from "graphql-tag";
 import Modal from "react-modal";
 import { reviewOrder } from "../../apollo/server";
@@ -48,7 +47,11 @@ const REVIEWORDER = gql`
   ${reviewOrder}
 `;
 
-function useQuery() {
+const ORDER = gql`
+  ${singleOrder}
+`;
+
+function useQueryData() {
   return new URLSearchParams(useLocation().search);
 }
 
@@ -60,7 +63,7 @@ function OrderDetail() {
   const navigate = useNavigate();
   let destCoordinates = null;
   let restCoordinates = {};
-  const queryParams = useQuery();
+  const queryParams = useQueryData();
   const [toggleChat, setToggleChat] = useState(false);
   const { location } = useLocationContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -72,12 +75,28 @@ function OrderDetail() {
     onCompleted,
   });
 
-  useEffect(() => {
-    async function Track() {
-      // await Analytics.track(Analytics.events.NAVIGATE_TO_RATEANDREVIEW);
+  const {
+    data,
+    called: calledOrders,
+    loading: loadingOrders,
+    error: errorOrders,
+    data: dataOrders,
+    networkStatus: networkStatusOrders,
+    fetchMore: fetchMoreOrders,
+    subscribeToMore: subscribeToMoreOrders,
+  } = useQuery(
+    ORDER,
+    { variables: { id } },
+    {
+      fetchPolicy: "network-only",
+      onCompleted,
+      onError,
     }
-    Track();
-  }, []);
+  );
+
+  const order = data?.singleOrder;
+
+  console.log({ order });
 
   function onFinishRating(rating) {
     setRating(rating);
@@ -133,14 +152,8 @@ function OrderDetail() {
     [restCoordinates, destCoordinates]
   );
 
-  const { loadingOrders, errorOrders, orders, clearCart } = useContext(UserContext);
-  console.log(orders , 'ORDERS------11111111111111111111111111111111111')
+  const { clearCart } = useContext(UserContext);
 
-  useEffect(async () => {
-    // await Analytics.track(Analytics.events.NAVIGATE_TO_ORDER_DETAIL, {
-    //   orderId: id,
-    // });
-  }, []);
   useEffect(() => {
     if (!id) {
       navigate("/orders");
@@ -158,7 +171,8 @@ function OrderDetail() {
       </Grid>
     );
   }
-  const order = orders.find((o) => o._id === id);
+
+  // const order = orders?.length ? orders.find((o) => o._id === id) : null;
   if (loadingOrders || !order) {
     return (
       <Grid container className={classes.spinnerContainer}>
@@ -167,6 +181,7 @@ function OrderDetail() {
       </Grid>
     );
   }
+
   restCoordinates = {
     lat: parseFloat(order.restaurant.location.coordinates[1]),
     lng: parseFloat(order.restaurant.location.coordinates[0]),
@@ -203,7 +218,7 @@ function OrderDetail() {
                     center={restCoordinates}
                     onLoad={destCoordinates && onLoad}
                     options={{
-                      styles: mapStyles,
+                      // styles: mapStyles,
                       zoomControl: true,
                       zoomControlOptions: {
                         position: window.google.maps.ControlPosition.RIGHT_TOP,

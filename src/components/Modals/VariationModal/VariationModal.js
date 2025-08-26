@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import {
   Box,
   Button,
@@ -28,11 +27,13 @@ import React, { useCallback, useContext, useEffect, useState } from "react";
 import ConfigurationContext from "../../../context/Configuration";
 import UserContext from "../../../context/User";
 import HeadingView from "./HeadingView";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 import useStyles from "./styles";
+import { direction } from "../../../utils/helper";
 
 function VariationModal({ isVisible, toggleModal, data }) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const { language } = i18n;
   const theme = useTheme();
   const classes = useStyles();
   const configuration = useContext(ConfigurationContext);
@@ -51,11 +52,11 @@ function VariationModal({ isVisible, toggleModal, data }) {
 
   useEffect(() => {
     setSelectedVariation({
-      ...data?.food.variations[0],
-      addons: data?.food.variations[0].addons.map((fa) => {
-        const addon = data?.addons.find((a) => a._id === fa);
-        const addonOptions = addon.options.map((ao) => {
-          return data?.options.find((o) => o._id === ao);
+      ...data?.food?.variations[0],
+      addons: data?.food?.variations[0].addons.map((fa) => {
+        const addon = data?.addons?.find((a) => a._id === fa);
+        const addonOptions = addon?.options?.map((ao) => {
+          return data?.options?.find((o) => o._id === ao);
         });
         return {
           ...addon,
@@ -116,17 +117,17 @@ function VariationModal({ isVisible, toggleModal, data }) {
       if (addon.quantityMinimum === 1 && addon.quantityMaximum === 1) {
         selectedAddons[index].options = [option];
       } else {
-        const optionIndex = selectedAddons[index].options.findIndex(
+        const optionIndex = selectedAddons[index].options?.findIndex(
           (opt) => opt._id === option._id
         );
         if (optionIndex > -1) {
-          selectedAddons[index].options = selectedAddons[index].options.filter(
+          selectedAddons[index].options = selectedAddons[index].options?.filter(
             (opt) => opt._id !== option._id
           );
         } else {
           selectedAddons[index].options.push(option);
         }
-        if (!selectedAddons[index].options.length) {
+        if (!selectedAddons[index].options?.length) {
           selectedAddons.splice(index, 1);
         }
       }
@@ -150,6 +151,10 @@ function VariationModal({ isVisible, toggleModal, data }) {
       ) {
         validatedAddons.push(false);
       } else validatedAddons.push(true);
+    });
+    console.log({ validatedAddons });
+    console.log({
+      validatedAddonsCheck: validatedAddons.every((val) => val === false),
     });
     return validatedAddons.every((val) => val === false);
   };
@@ -236,14 +241,16 @@ function VariationModal({ isVisible, toggleModal, data }) {
       await addQuantity(cartItem.key, quantity);
     }
     toggleModal();
+    setSpecialInstructions("");
   };
 
   const radioORcheckboxes = useCallback(
     (addon) => {
+      console.log({ addonOptions: addon.options });
       if (addon.quantityMinimum === 1 && addon.quantityMaximum === 1) {
         return (
           <RadioGroup>
-            {addon?.options.map((option, index) => (
+            {addon?.options?.map((option, index) => (
               <Box
                 key={`OPTIONS_${option._id}`}
                 display="flex"
@@ -262,38 +269,69 @@ function VariationModal({ isVisible, toggleModal, data }) {
                     </Typography>
                   }
                 />
-                <Typography className={classes.priceTitle}>
-                  {`${configuration.currencySymbol} ${option.price.toFixed(2)}`}
-                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    flexDirection: language === "en" ? "row" : "row-reverse",
+                  }}
+                >
+                  <Typography className={classes.priceTitle}>
+                    {configuration.currencySymbol}
+                  </Typography>
+                  <Typography className={classes.priceTitle}>
+                    {option.price.toFixed(2)}
+                  </Typography>
+                </Box>
               </Box>
             ))}
           </RadioGroup>
         );
       } else {
-        return addon?.options.map((option, index) => (
-          <Box
-            key={`OPTIONS_${option._id}_${index}`}
-            display="flex"
-            justifyContent="space-between"
-          >
-            <FormControlLabel
-              control={<Checkbox color="primary" />}
-              onClick={() => onSelectOption(addon, option)}
-              name={option._id}
-              label={
-                <Typography
-                  style={{ color: theme.palette.text.secondary }}
-                  className={classes.priceTitle}
+        return (
+          addon &&
+          addon.options.length &&
+          addon?.options?.map((option, index) => {
+            console.log({ option });
+            return (
+              <Box
+                key={`OPTIONS_${option?._id}_${index}`}
+                display="flex"
+                justifyContent="space-between"
+              >
+                <FormControlLabel
+                  control={<Checkbox color="primary" />}
+                  onChange={() => onSelectOption(addon, option)}
+                  name={option?._id}
+                  label={
+                    <Typography
+                      style={{ color: theme.palette.text.secondary }}
+                      className={classes.priceTitle}
+                    >
+                      {option?.title}
+                    </Typography>
+                  }
+                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    flexDirection: language === "en" ? "row" : "row-reverse",
+                  }}
                 >
-                  {option.title}
-                </Typography>
-              }
-            />
-            <Typography className={classes.priceTitle}>
-              {`${configuration.currencySymbol} ${option.price.toFixed(2)}`}
-            </Typography>
-          </Box>
-        ));
+                  <Typography className={classes.priceTitle}>
+                    {configuration.currencySymbol}
+                  </Typography>
+                  <Typography className={classes.priceTitle}>
+                    {option.price.toFixed(2)}
+                  </Typography>
+                </Box>
+              </Box>
+            );
+          })
+        );
       }
     },
     [selectedVariation]
@@ -309,6 +347,7 @@ function VariationModal({ isVisible, toggleModal, data }) {
         maxWidth="lg"
         pt={theme.spacing(0.5)}
         className={classes.root}
+        dir={direction(language)}
       >
         <Box className={classes.outerContainer}>
           <Box
@@ -318,7 +357,7 @@ function VariationModal({ isVisible, toggleModal, data }) {
             }}
           >
             <Typography variant="h4" color="white" style={{ fontWeight: 600 }}>
-              {t('customize')}
+              {t("customize")}
             </Typography>
             <Button onClick={toggleModal} className={classes.closeContainer}>
               <CloseIcon style={{ color: "black" }} />
@@ -331,9 +370,21 @@ function VariationModal({ isVisible, toggleModal, data }) {
                   <Typography className={classes.itemTitle}>
                     {data?.food?.title ?? ""}
                   </Typography>
-                  <Typography className={classes.priceTitle}>{` ${
-                    configuration.currencySymbol
-                  } ${calculatePrice()}`}</Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      flexDirection: language === "en" ? "row" : "row-reverse",
+                    }}
+                  >
+                    <Typography className={classes.priceTitle}>
+                      {configuration.currencySymbol}
+                    </Typography>
+                    <Typography className={classes.priceTitle}>
+                      {calculatePrice()}
+                    </Typography>
+                  </Box>
                 </Box>
                 <Box mb={theme.spacing(2)}>
                   <Typography className={classes.priceTitle}>
@@ -343,12 +394,12 @@ function VariationModal({ isVisible, toggleModal, data }) {
                 <Divider orientation="horizontal" />
               </DialogTitle>
               <DialogContent>
-                {data?.food.variations.length > 1 && (
+                {data?.food?.variations?.length && (
                   <>
-                    <HeadingView />
+                    <HeadingView quantityMinimum={1} option={false} />
                     <FormControl style={{ width: "100%" }}>
                       <RadioGroup>
-                        {data?.food.variations.map((variation, index) => (
+                        {data?.food?.variations?.map((variation, index) => (
                           <Box
                             key={`ADDONS_${index}`}
                             display="flex"
@@ -358,6 +409,7 @@ function VariationModal({ isVisible, toggleModal, data }) {
                               checked={variation._id === selectedVariation._id}
                               value={variation._id}
                               onClick={() => onSelectVariation(variation)}
+                              sx={{ marginInline: 0 }}
                               control={<Radio color="primary" />}
                               label={
                                 <Typography
@@ -370,44 +422,64 @@ function VariationModal({ isVisible, toggleModal, data }) {
                                 </Typography>
                               }
                             />
-                            
-                            <Typography className={classes.priceTitle}>
-                              {`${
-                                configuration.currencySymbol
-                              } ${variation.price.toFixed(2)}`}
-                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                flexDirection:
+                                  language === "en" ? "row" : "row-reverse",
+                              }}
+                            >
+                              <Typography className={classes.priceTitle}>
+                                {configuration.currencySymbol}
+                              </Typography>
+                              <Typography className={classes.priceTitle}>
+                                {variation.price.toFixed(2)}
+                              </Typography>
+                            </Box>
                           </Box>
                         ))}
                       </RadioGroup>
                     </FormControl>
-                    <Divider orientation="horizontal" style={{marginBottom: "10px"}}/>
+                    <Divider
+                      orientation="horizontal"
+                      style={{ marginBottom: "10px" }}
+                    />
                   </>
                 )}
                 <Box />
                 <FormControl style={{ flex: 1, display: "flex" }}>
                   <FormGroup>
-                    {selectedVariation?.addons?.map((addon, index) => (
-                      <Box key={`VARIATION_${index}`}>
-                        <HeadingView
-                          title={addon.title}
-                          subTitle={addon.description}
-                          error={addon.error}
-                          status={
-                            addon.quantityMinimum === 0
-                              ? t('optional')
-                              : `${addon.quantityMinimum} ${t('required')}`
-                          }
-                        />
-                        {radioORcheckboxes(addon)}
-                      </Box>
-                    ))}
+                    {selectedVariation?.addons?.map((addon, index) => {
+                      console.log({ addonItem: addon });
+                      return (
+                        <Box key={`VARIATION_${index}`}>
+                          <HeadingView
+                            title={addon.title}
+                            subTitle={addon.description}
+                            error={false}
+                            option={true}
+                            quantityMinimum={addon.quantityMinimum}
+                            status={
+                              addon.quantityMinimum === 0
+                                ? "optional"
+                                : "required"
+                            }
+                          />
+                          {radioORcheckboxes(addon)}
+                        </Box>
+                      );
+                    })}
                   </FormGroup>
                   <FormGroup>
                     <HeadingView
-                      title={t('specialInstructions')}
-                      subTitle={t('anySpecific')}
-                      status={t('optional')}
+                      title={t("specialInstructions")}
+                      subTitle={t("anySpecific")}
+                      status={"optional"}
                       error={false}
+                      option={false}
+                      notice={true}
                     />
                     <Box mt={theme.spacing(2)} />
                     <OutlinedInput
@@ -420,7 +492,7 @@ function VariationModal({ isVisible, toggleModal, data }) {
                       onChange={(event) =>
                         setSpecialInstructions(event.target.value)
                       }
-                      placeholder={t('placeholder')}
+                      placeholder={t("placeholder")}
                       variant="filled"
                       color="primary"
                       inputProps={{
@@ -438,46 +510,56 @@ function VariationModal({ isVisible, toggleModal, data }) {
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
+                  gap={3}
                 >
-                  <IconButton
-                    size="small"
-                    className={classes.mr}
-                    style={{
-                      minWidth: "auto",
-                      backgroundColor: theme.palette.common.black,
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onRemove();
-                    }}
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
                   >
-                    <RemoveIcon fontSize="medium" style={{ color: "white" }} />
-                  </IconButton>
-                  <Typography
-                    style={{
-                      fontSize: "1.25rem",
-                      border: "1px solid",
-                      padding: "5px 15px",
-                      borderRadius: 10,
-                    }}
-                    className={`${classes.mr} ${classes.itemTitle}`}
-                  >
-                    {quantity}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    className={classes.mr}
-                    style={{
-                      minWidth: "auto",
-                      backgroundColor: theme.palette.common.black,
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onAdd();
-                    }}
-                  >
-                    <AddIcon fontSize="medium" style={{ color: "white" }} />
-                  </IconButton>
+                    <IconButton
+                      size="small"
+                      className={classes.mr}
+                      style={{
+                        minWidth: "auto",
+                        backgroundColor: theme.palette.common.black,
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onRemove();
+                      }}
+                    >
+                      <RemoveIcon
+                        fontSize="medium"
+                        style={{ color: "white" }}
+                      />
+                    </IconButton>
+                    <Typography
+                      style={{
+                        fontSize: "1.25rem",
+                        border: "1px solid",
+                        padding: "5px 15px",
+                        borderRadius: 10,
+                      }}
+                      className={`${classes.mr} ${classes.itemTitle}`}
+                    >
+                      {quantity}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      className={classes.mr}
+                      style={{
+                        minWidth: "auto",
+                        backgroundColor: theme.palette.common.black,
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onAdd();
+                      }}
+                    >
+                      <AddIcon fontSize="medium" style={{ color: "white" }} />
+                    </IconButton>
+                  </Box>
                   <Button
                     variant="contained"
                     color="primary"
@@ -490,7 +572,7 @@ function VariationModal({ isVisible, toggleModal, data }) {
                     }}
                   >
                     <Typography className={classes.checkoutText}>
-                      {t('addToCart')}
+                      {t("addToCart")}
                     </Typography>
                   </Button>
                 </Box>

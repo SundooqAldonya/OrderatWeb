@@ -29,13 +29,14 @@ const SAVE_NOTIFICATION_TOKEN_WEB = gql`
   ${saveNotificationTokenWeb}
 `;
 
-const UserContext = React.createContext({});
+export const UserContext = React.createContext({});
 
 export const UserProvider = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const client = useApolloClient();
   const [token, setToken] = useState(localStorage.getItem("token"));
-  const [cart, setCart] = useState([]); // use initial state of cart here
+  const [cart, setCart] = useState([]);
+  const [phone, setPhone] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [saveNotificationToken] = useMutation(SAVE_NOTIFICATION_TOKEN_WEB, {
     onCompleted,
@@ -108,7 +109,6 @@ export const UserProvider = (props) => {
   }, []);
 
   function onCompleted({ profile, orders, saveNotificationTokenWeb }) {
-    
     if (profile) {
       updateNotificationToken();
     }
@@ -135,13 +135,11 @@ export const UserProvider = (props) => {
   };
 
   const subscribeOrders = () => {
-  
     try {
       const unsubscribeOrders = subscribeToMoreOrders({
         document: SUBSCRIPTION_ORDERS,
         variables: { userId: dataProfile.profile._id },
         updateQuery: (prev, { subscriptionData }) => {
-      
           if (!subscriptionData.data) return prev;
           const { _id } = subscriptionData.data.orderStatusChanged.order;
           if (subscriptionData.data.orderStatusChanged.origin === "new") {
@@ -198,17 +196,19 @@ export const UserProvider = (props) => {
   };
 
   const addQuantity = async (key, quantity = 1) => {
-    const cartIndex = cart.findIndex((c) => c.key === key);
-    cart[cartIndex].quantity += quantity;
-    setCart([...cart]);
-    localStorage.setItem("cartItems", JSON.stringify([...cart]));
+    const newCart = [...cart];
+    const cartIndex = newCart.findIndex((c) => c.key === key);
+    newCart[cartIndex].quantity += quantity;
+    setCart([...newCart]);
+    localStorage.setItem("cartItems", JSON.stringify([...newCart]));
   };
 
   const deleteItem = async (key) => {
-    const cartIndex = cart.findIndex((c) => c.key === key);
+    const newCart = [...cart];
+    const cartIndex = newCart.findIndex((c) => c.key === key);
     if (cartIndex > -1) {
-      cart.splice(cartIndex, 1);
-      const items = [...cart.filter((c) => c.quantity > 0)];
+      newCart.splice(cartIndex, 1);
+      const items = [...newCart.filter((c) => c.quantity > 0)];
       setCart(items);
       if (items.length === 0) setRestaurant(null);
       localStorage.setItem("cartItems", JSON.stringify(items));
@@ -216,16 +216,18 @@ export const UserProvider = (props) => {
   };
 
   const removeQuantity = async (key) => {
-    const cartIndex = cart.findIndex((c) => c.key === key);
-    cart[cartIndex].quantity -= 1;
-    const items = [...cart.filter((c) => c.quantity > 0)];
+    const newCart = [...cart];
+    const cartIndex = newCart.findIndex((c) => c.key === key);
+    newCart[cartIndex].quantity -= 1;
+    const items = [...newCart.filter((c) => c.quantity > 0)];
     setCart(items);
     if (items.length === 0) setRestaurant(null);
     localStorage.setItem("cartItems", JSON.stringify(items));
   };
 
   const checkItemCart = (itemId) => {
-    const cartIndex = cart.findIndex((c) => c._id === itemId);
+    const newCart = [...cart];
+    const cartIndex = newCart.findIndex((c) => c._id === itemId);
     if (cartIndex < 0) {
       return {
         exist: false,
@@ -234,8 +236,8 @@ export const UserProvider = (props) => {
     } else {
       return {
         exist: true,
-        quantity: cart[cartIndex].quantity,
-        key: cart[cartIndex].key,
+        quantity: newCart[cartIndex].quantity,
+        key: newCart[cartIndex].key,
       };
     }
   };
@@ -256,8 +258,9 @@ export const UserProvider = (props) => {
     clearFlag,
     specialInstructions = ""
   ) => {
-    const cartItems = clearFlag ? [] : cart;
-    cartItems.push({
+    const newCart = [...cart];
+    let cartItems = clearFlag ? [] : [...newCart];
+    const newObj = {
       key: v4(),
       _id,
       quantity: quantity,
@@ -266,10 +269,22 @@ export const UserProvider = (props) => {
       },
       addons,
       specialInstructions,
-    });
-
-    localStorage.setItem("cartItems", JSON.stringify([...cartItems]));
-    setCart([...cartItems]);
+    };
+    cartItems = [...cartItems, newObj];
+    // cartItems.push({
+    //   key: v4(),
+    //   _id,
+    //   quantity: quantity,
+    //   variation: {
+    //     _id: variation,
+    //   },
+    //   addons,
+    //   specialInstructions,
+    // });
+    const updatedCart = [...cartItems];
+    console.log({ updatedCart });
+    localStorage.setItem("cartItems", JSON.stringify([...updatedCart]));
+    setCart([...updatedCart]);
   };
 
   const updateCart = async (cart) => {
@@ -283,10 +298,8 @@ export const UserProvider = (props) => {
   };
 
   const updateNotificationToken = () => {
-   
     const token = localStorage.getItem("messaging-token");
     if (token) {
-     
       saveNotificationToken({ variables: { token } });
     }
   };
@@ -303,7 +316,8 @@ export const UserProvider = (props) => {
         logout,
         loadingOrders: loadingOrders && calledOrders,
         errorOrders,
-        orders: dataOrders && dataOrders.orders ? dataOrders.orders : [],
+        orders:
+          token && dataOrders && dataOrders.orders ? dataOrders.orders : [],
         fetchOrders,
         fetchMoreOrdersFunc,
         networkStatusOrders,
@@ -319,6 +333,9 @@ export const UserProvider = (props) => {
         restaurant,
         setCartRestaurant,
         isLoading,
+        phone,
+        setPhone,
+        fetchProfile,
       }}
     >
       {props.children}

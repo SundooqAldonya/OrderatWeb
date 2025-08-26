@@ -24,8 +24,10 @@ import { useLocationContext } from "../../../context/Location";
 import { useLocation } from "../../../hooks";
 import FlashMessage from "../../FlashMessage";
 import useStyles from "./styles";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 import { DeliveryCard } from "../../Checkout";
+import { ExpandContext } from "../../../context/useExpand";
+import { useContext } from "react";
 
 const autocompleteService = { current: null };
 
@@ -35,7 +37,9 @@ function Subheader() {
   const mobile = useMediaQuery(theme.breakpoints.down("sm"));
   const spacingTop = mobile ? "52px" : "63px";
   const classes = useStyles();
-  const [expand, setExpand] = useState(false);
+  // const [expand, setExpand] = useState(false);
+  const { expand, setExpand } = useContext(ExpandContext);
+
   const { location, setLocation } = useLocationContext();
   const { getCurrentLocation } = useLocation();
   const [search, setSearch] = useState(
@@ -51,6 +55,7 @@ function Subheader() {
   const [selectedAddress, setSelectedAddress] = useState();
 
   const setDeliveryAddress = (item) => {
+    console.log({ item });
     setSelectedAddress(item);
     setLocation({
       _id: item?._id,
@@ -60,6 +65,9 @@ function Subheader() {
       deliveryAddress: item?.deliveryAddress,
       details: item?.details,
     });
+    // setAlertMessage(t("address_selected"));
+    // setOpen(true);
+    setExpand(false);
   };
   const fetch = React.useMemo(
     () =>
@@ -120,6 +128,11 @@ function Subheader() {
       lng: data.longitude,
     });
   };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
   return (
     <Box
       style={{
@@ -135,7 +148,12 @@ function Subheader() {
         }}
         className={`${classes.root} ${classes.shadow} ${classes.mainContainer}`}
       >
-        <FlashMessage alertMessage={alertMessage} open={open} setOpen={setOpen} />
+        <FlashMessage
+          alertMessage={alertMessage}
+          open={open}
+          severity={"success"}
+          handleClose={handleClose}
+        />
         <Grid container>
           <Grid item xs={12}>
             <Button
@@ -152,10 +170,10 @@ function Subheader() {
                 style={{
                   backgroundColor: theme.palette.primary.main,
                   fontWeight: theme.typography.fontWeightBold,
-                  color:theme.palette.common.white,
+                  color: theme.palette.common.white,
                 }}
               >
-                {t('deliveringTo')}
+                {t("deliveringTo")}
               </Typography>
               <Box
                 style={{
@@ -318,6 +336,15 @@ function Subheader() {
                   e.preventDefault();
                   setExpand(false);
                   if (search) {
+                    // setSelectedAddress({
+                    //   _id: "",
+                    //   deliveryAddress: search,
+                    //   details: search,
+                    //   label: "Home",
+                    //   location: {
+                    //     coordinates: [latLng.lng, latLng.lat],
+                    //   },
+                    // });
                     setLocation({
                       label: "Home",
                       latitude: latLng.lat,

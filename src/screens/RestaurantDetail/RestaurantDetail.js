@@ -34,9 +34,13 @@ import { useRestaurant } from "../../hooks";
 import { DAYS } from "../../utils/constantValues";
 import useStyles from "./styles";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import { direction } from "../../utils/helper";
+import { useTranslation } from "react-i18next";
 
 function RestaurantDetail() {
   const theme = useTheme();
+  const { i18n } = useTranslation();
+  const { language } = i18n;
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
   const classes = useStyles();
   const { state } = useLocation();
@@ -47,9 +51,10 @@ function RestaurantDetail() {
   const [reviewModal, setReviewModal] = useState(false);
   const [variationModal, setVariationModal] = useState(false);
   const { data, loading, error } = useRestaurant(state?.id, query.slug);
-  const allDeals = data?.restaurant?.categories.filter(
+  const allDeals = data?.restaurantCustomer?.categories.filter(
     (cat) => cat.foods.length
   );
+
   const {
     restaurant: restaurantCart,
     setCartRestaurant,
@@ -60,43 +65,47 @@ function RestaurantDetail() {
     clearCart,
     isLoggedIn,
   } = useContext(UserContext);
+
   const deals = allDeals?.map((c, index) => ({
     ...c,
     index,
   }));
+
   const headerData = {
-    name: data?.restaurant?.name ?? "...",
-    averageReview: data?.restaurant?.reviewData.ratings ?? "...",
-    averageTotal: data?.restaurant?.reviewData.total ?? "...",
-    isAvailable: data?.restaurant?.isAvailable ?? true,
-    openingTimes: data?.restaurant?.openingTimes ?? [],
+    name: data?.restaurantCustomer?.name ?? "...",
+    averageReview: data?.restaurantCustomer?.reviewData?.ratings ?? "...",
+    averageTotal: data?.restaurantCustomer?.reviewData?.total ?? "...",
+    isAvailable: data?.restaurantCustomer?.isAvailable ?? true,
+    openingTimes: data?.restaurantCustomer?.openingTimes ?? [],
     deals: deals,
-    deliveryTime: data?.restaurant?.deliveryTime,
+    deliveryTime: data?.restaurantCustomer?.deliveryTime,
   };
+
   const restaurantInfo = {
-    _id: data?.restaurant._id ?? "",
-    name: data?.restaurant?.name ?? "...",
-    image: data?.restaurant?.image ?? "",
+    _id: data?.restaurantCustomer._id ?? "",
+    name: data?.restaurantCustomer?.name ?? "...",
+    image: data?.restaurantCustomer?.image ?? "",
     deals: deals,
-    reviewData: data?.restaurant?.reviewData ?? {},
-    address: data?.restaurant?.address ?? "",
-    deliveryCharges: data?.restaurant?.deliveryCharges ?? "",
-    deliveryTime: data?.restaurant?.deliveryTime ?? "...",
-    isAvailable: data?.restaurant?.isAvailable ?? true,
-    openingTimes: data?.restaurant?.openingTimes ?? [],
+    reviewData: data?.restaurantCustomer?.reviewData ?? {},
+    address: data?.restaurantCustomer?.address ?? "",
+    deliveryCharges: data?.restaurantCustomer?.deliveryCharges ?? "",
+    deliveryTime: data?.restaurantCustomer?.deliveryTime ?? "...",
+    isAvailable: data?.restaurantCustomer?.isAvailable ?? true,
+    openingTimes: data?.restaurantCustomer?.openingTimes ?? [],
   };
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  useEffect(async () => {
-    // await Analytics.track(Analytics.events.NAVIGATE_TO_RESTAURANTS_DETAIL);
-  }, []);
+
   useEffect(() => {
-    if (data?.restaurant && (!isOpen || !data?.restaurant?.isAvailable)) {
+    if (
+      data?.restaurantCustomer &&
+      (!isOpen || !data?.restaurantCustomer?.isAvailable)
+    ) {
       toggleCloseModal();
     }
-  }, [data?.restaurant]);
+  }, [data?.restaurantCustomer]);
 
   const toggleVariationModal = useCallback(() => {
     setVariationModal((prev) => !prev);
@@ -112,16 +121,16 @@ function RestaurantDetail() {
 
   const isOpen = useCallback(() => {
     if (data) {
-      if (data.restaurant.openingTimes.length < 1) return false;
+      if (data.restaurantCustomer?.openingTimes?.length < 1) return false;
       const date = new Date();
       const day = date.getDay();
       const hours = date.getHours();
       const minutes = date.getMinutes();
-      const todaysTimings = data.restaurant.openingTimes.find(
+      const todaysTimings = data?.restaurantCustomer?.openingTimes?.find(
         (o) => o.day === DAYS[day]
       );
       if (todaysTimings === undefined) return false;
-      const times = todaysTimings.times.filter(
+      const times = todaysTimings?.times?.filter(
         (t) =>
           hours >= Number(t.startTime[0]) &&
           minutes >= Number(t.startTime[1]) &&
@@ -144,23 +153,26 @@ function RestaurantDetail() {
   };
 
   const addToCart = async (food, clearFlag) => {
+    if (clearFlag) await clearCart();
     if (
       food.variations.length === 1 &&
       food.variations[0].addons.length === 0
     ) {
       await setCartRestaurant(food.restaurant);
       const result = checkItemCart(food._id);
-      if (result.exist) await addQuantity(result.key);
-      else
+      if (result.exist) {
+        await addQuantity(result.key);
+      } else {
         await addCartItem(food._id, food.variations[0]._id, 1, [], clearFlag);
+      }
     } else {
-      if (clearFlag) await clearCart();
+      // if (clearFlag) await clearCart();
       setAddonData({
         food,
-        addons: data?.restaurant.addons,
-        options: data?.restaurant.options,
-        restaurant: data?.restaurant._id,
-        image: data?.restaurant?.image,
+        addons: data?.restaurantCustomer.addons,
+        options: data?.restaurantCustomer.options,
+        restaurant: data?.restaurantCustomer._id,
+        image: data?.restaurantCustomer?.image,
       });
       toggleVariationModal();
     }
@@ -181,7 +193,10 @@ function RestaurantDetail() {
 
   if (loading || error) {
     return (
-      <div style={{ backgroundColor: theme.palette.grey[200] }}>
+      <div
+        dir={direction(language)}
+        style={{ backgroundColor: theme.palette.grey[200] }}
+      >
         <Grid container>
           {isLoggedIn ? <Header /> : <LoginHeader showIcon />}
         </Grid>
@@ -237,10 +252,11 @@ function RestaurantDetail() {
         handleClose={toggleSnackbar}
       />
       <div
+        dir={direction(language)}
         style={{
           backgroundColor: theme.palette.grey[200],
           scrollBehavior: "smooth",
-          marginTop:'20px',
+          marginTop: "20px",
         }}
       >
         <Grid container>
@@ -253,6 +269,7 @@ function RestaurantDetail() {
           className={classes.bg}
         >
           {!isTablet && <RestaurantCart showMessage={showMessage} />}
+
           <Grid item lg={9} xs={12}>
             <Container
               maxWidth="xl"
@@ -281,7 +298,7 @@ function RestaurantDetail() {
                       color: theme.palette.common.white,
                       borderRadius: 20,
                       padding: 2,
-                      marginTop:5,
+                      marginTop: 5,
                     }}
                   />
                 </Button>
